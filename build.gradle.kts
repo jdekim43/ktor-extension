@@ -9,7 +9,7 @@ plugins {
 
 val artifactName = "ktor-extension"
 val artifactGroup = "kr.jadekim"
-val artifactVersion = "0.0.1"
+val artifactVersion = "0.0.2"
 group = artifactGroup
 version = artifactVersion
 
@@ -33,8 +33,6 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
     api("io.ktor:ktor-server-core:$ktorVersion")
-    implementation("io.ktor:ktor-server-host-common:$ktorVersion")
-    implementation("io.ktor:ktor-server-netty:$ktorVersion")
     compileOnly("io.ktor:ktor-auth:$ktorVersion")
 }
 
@@ -73,7 +71,7 @@ bintray {
         repo = "maven"
         name = rootProject.name
         setLicenses("MIT")
-        setLabels("kotlin", "logger")
+        setLabels("kotlin", "ktor")
         vcsUrl = "https://github.com/jdekim43/ktor-extension.git"
         version.apply {
             name = artifactVersion
