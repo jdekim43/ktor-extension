@@ -18,8 +18,8 @@ class PathNormalizeFeature private constructor() {
         override val key: AttributeKey<PathNormalizeFeature> = AttributeKey("PathNormalizeFeature")
 
         override fun install(
-            pipeline: Application,
-            configure: Configuration.() -> Unit
+                pipeline: Application,
+                configure: Configuration.() -> Unit
         ): PathNormalizeFeature {
             val feature = PathNormalizeFeature()
 

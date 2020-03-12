@@ -11,7 +11,7 @@ import kr.jadekim.logger.context.CoroutineLogContext
 data class BearerCredential(val token: String) : Credential
 
 class BearerAuthenticationProvider internal constructor(
-    configuration: Configuration
+        configuration: Configuration
 ) : AuthenticationProvider(configuration) {
 
     internal val authenticationFunction = configuration.authenticationFunction
@@ -27,8 +27,8 @@ class BearerAuthenticationProvider internal constructor(
 }
 
 fun Authentication.Configuration.bearer(
-    name: String? = null,
-    configure: BearerAuthenticationProvider.Configuration.() -> Unit
+        name: String? = null,
+        configure: BearerAuthenticationProvider.Configuration.() -> Unit
 ) {
     val provider = BearerAuthenticationProvider(BearerAuthenticationProvider.Configuration(name).apply(configure))
     val authenticate = provider.authenticationFunction

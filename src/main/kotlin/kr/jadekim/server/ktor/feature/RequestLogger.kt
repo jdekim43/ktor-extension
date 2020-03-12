@@ -8,20 +8,19 @@ import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.util.toMap
 import kotlinx.coroutines.withContext
-import kr.jadekim.common.apiserver.enumuration.Environment
 import kr.jadekim.logger.JLog
 import kr.jadekim.logger.context.CoroutineLogContext
 import kr.jadekim.server.ktor.*
 
 class RequestLogFeature private constructor(
-    private val serviceEnv: Environment?,
+    private val serviceEnv: String?,
     private val release: String,
     private val filterParameters: List<String> = emptyList(),
     private val logContext: PipelineContext<Unit, ApplicationCall>.(CoroutineLogContext) -> Unit = {}
 ) {
 
     class Configuration {
-        var serviceEnv: Environment? = null
+        var serviceEnv: String? = null
         var release: String = "not_set"
         var filterParameters: List<String> = emptyList()
         var logContext: PipelineContext<Unit, ApplicationCall>.(CoroutineLogContext) -> Unit = {}
@@ -52,7 +51,7 @@ class RequestLogFeature private constructor(
 
                 val preHandleTime = System.currentTimeMillis()
                 logContext["preHandleTime"] = preHandleTime
-                logContext["serviceEnv"] = feature.serviceEnv?.name ?: "not_set"
+                logContext["serviceEnv"] = feature.serviceEnv ?: "not_set"
                 logContext["deployVersion"] = feature.release
                 logContext["remoteAddress"] = call.request.host()
                 logContext["userAgent"] = call.request.userAgent()

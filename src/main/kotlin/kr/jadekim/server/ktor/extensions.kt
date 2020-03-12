@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.application.ApplicationCall
 import io.ktor.http.HttpMethod
 import io.ktor.http.Parameters
+import io.ktor.request.acceptLanguage
 import io.ktor.request.receive
 import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
@@ -13,6 +14,7 @@ import io.ktor.util.pipeline.PipelineContext
 import io.ktor.util.toMap
 import kr.jadekim.common.apiserver.exception.MissingParameterException
 import kr.jadekim.common.apiserver.protocol.ApiResponse
+import java.util.*
 import kotlin.reflect.KClass
 
 var jsonBodyMapper = jacksonObjectMapper()
@@ -104,22 +106,31 @@ suspend fun <T : Any> PipelineContext<*, ApplicationCall>.jsonBody(clazz: KClass
     }
 }
 
-suspend fun PipelineContext<*, ApplicationCall>.response(value: Any?) = context.respond(value ?: ApiResponse<Any>())
-
-suspend fun PipelineContext<*, ApplicationCall>.success(data: Any? = null, message: String = "success") {
-    return response(ApiResponse(message = message, data = data))
+suspend fun PipelineContext<*, ApplicationCall>.response(value: Any? = null) {
+    context.respond(ApiResponse(data = value))
 }
 
 fun Parameters?.toSingleValueMap(): Map<String, String> {
     return this?.toMap()
-        ?.mapValues { it.value.firstOrNull() }
-        ?.filterValues { !it.isNullOrBlank() }
-        ?.mapValues { it.value!! }
-        ?: emptyMap()
+            ?.mapValues { it.value.firstOrNull() }
+            ?.filterValues { !it.isNullOrBlank() }
+            ?.mapValues { it.value!! }
+            ?: emptyMap()
 }
 
 val HttpMethod.canReadBody
     get() = when (this) {
         HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch -> true
         else -> false
+    }
+
+val PipelineContext<*, ApplicationCall>.locale: Locale
+    get() {
+        val acceptLanguage = context.request.acceptLanguage()
+
+        return if (acceptLanguage == null || acceptLanguage.contains("KR", ignoreCase = true)) {
+            Locale.KOREA
+        } else {
+            Locale.ENGLISH
+        }
     }
