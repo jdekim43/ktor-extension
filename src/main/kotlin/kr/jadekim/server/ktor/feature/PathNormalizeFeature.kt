@@ -2,11 +2,13 @@ package kr.jadekim.server.ktor.feature
 
 import io.ktor.application.Application
 import io.ktor.application.ApplicationFeature
+import io.ktor.routing.Route
 import io.ktor.routing.Routing
 import io.ktor.util.AttributeKey
 import kr.jadekim.logger.integration.REQUEST_LOG_CONTEXT
-import kr.jadekim.server.ktor.PATH
-import kr.jadekim.server.ktor.ROUTE
+
+val ROUTE = AttributeKey<Route>("route")
+val PATH = AttributeKey<String>("path")
 
 class PathNormalizeFeature private constructor() {
 

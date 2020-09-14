@@ -1,28 +1,32 @@
 package kr.jadekim.server.ktor.feature
 
-import io.ktor.application.*
-import io.ktor.features.UnsupportedMediaTypeException
-import io.ktor.http.ContentType
+import io.ktor.application.Application
+import io.ktor.application.ApplicationCall
+import io.ktor.application.ApplicationCallPipeline
+import io.ktor.application.ApplicationFeature
+import io.ktor.http.Parameters
 import io.ktor.request.*
 import io.ktor.util.AttributeKey
+import io.ktor.util.flattenEntries
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.util.toMap
 import kotlinx.coroutines.withContext
 import kr.jadekim.logger.JLog
 import kr.jadekim.logger.context.CoroutineLogContext
-import kr.jadekim.server.ktor.*
+import kr.jadekim.server.ktor.canReadBody
+import kr.jadekim.server.ktor.canReadableBody
 
 class RequestLogFeature private constructor(
-    private val serviceEnv: String?,
-    private val release: String,
-    private val filterParameters: List<String> = emptyList(),
-    private val logContext: PipelineContext<Unit, ApplicationCall>.(CoroutineLogContext) -> Unit = {}
+        private val serviceEnv: String?,
+        private val release: String,
+        private val logBody: ApplicationCall.() -> Boolean = { false },
+        private val logContext: PipelineContext<Unit, ApplicationCall>.(CoroutineLogContext) -> Unit = {}
 ) {
 
     class Configuration {
         var serviceEnv: String? = null
         var release: String = "not_set"
-        var filterParameters: List<String> = emptyList()
+        var logBody: ApplicationCall.() -> Boolean = { false }
         var logContext: PipelineContext<Unit, ApplicationCall>.(CoroutineLogContext) -> Unit = {}
     }
 
@@ -33,19 +37,19 @@ class RequestLogFeature private constructor(
         private val logger = JLog.get("RequestLogger")
 
         override fun install(
-            pipeline: Application,
-            configure: Configuration.() -> Unit
+                pipeline: Application,
+                configure: Configuration.() -> Unit
         ): RequestLogFeature {
             val configuration = Configuration().apply(configure)
             val feature = RequestLogFeature(
-                configuration.serviceEnv,
-                configuration.release,
-                configuration.filterParameters,
-                configuration.logContext
+                    configuration.serviceEnv,
+                    configuration.release,
+                    configuration.logBody,
+                    configuration.logContext
             )
 
             pipeline.intercept(ApplicationCallPipeline.Call) {
-                val method = call.request.httpMethod
+                val method = context.request.httpMethod
 
                 val logContext = coroutineContext[CoroutineLogContext] ?: CoroutineLogContext()
 
@@ -53,55 +57,42 @@ class RequestLogFeature private constructor(
                 logContext["preHandleTime"] = preHandleTime
                 logContext["serviceEnv"] = feature.serviceEnv ?: "not_set"
                 logContext["deployVersion"] = feature.release
-                logContext["remoteAddress"] = call.request.host()
-                logContext["userAgent"] = call.request.userAgent()
-                logContext["headers"] = call.request.headers.toMap()
+                logContext["remoteAddress"] = context.request.host()
+                logContext["userAgent"] = context.request.userAgent()
+                logContext["headers"] = context.request.headers.toMap()
                 logContext["method"] = method
-
-                val parameters = (pathParam.toMap() + queryParam.toMap()).toMutableMap()
-
-                if (method.canReadBody) {
-                    when (call.request.contentType()) {
-                        ContentType.Application.FormUrlEncoded -> {
-                            try {
-                                withContext(logContext) {
-                                    bodyParam()?.toMap()?.let {
-                                        parameters.putAll(it)
-                                    }
-                                }
-                            } catch (e: UnsupportedMediaTypeException) {
-                                //do nothing
-                            }
-                        }
-                        ContentType.Application.Json -> {
-                            jsonBody().fields().forEach {
-                                parameters[it.key] = listOf(it.value.asText())
-                            }
-                        }
-                    }
-                }
-
-                logContext["parameters"] = parameters.filter { it.key !in feature.filterParameters }
+                logContext["pathParameter"] = context.parameters.toLogString()
+                logContext["query"] = context.request.queryParameters.toLogString()
 
                 feature.logContext(this@intercept, logContext)
 
                 withContext(logContext) {
-                    proceed()
+                    try {
+                        proceed()
+                    } finally {
+                        val status = context.response.status()?.value?.toString()
+
+                        logContext["durationToHandle"] = "${System.currentTimeMillis() - preHandleTime}"
+                        logContext["request"] = context.request.path()
+                        logContext["status"] = status
+
+                        if (method.canReadBody
+                                && context.request.contentType().canReadableBody
+                                && feature.logBody(context)) {
+                            logContext["body"] = context.receiveText()
+                        }
+
+                        val request = context.attributes.getOrNull(PATH)
+                                ?: "${context.request.path()}/(method:${method.value})"
+
+                        logger.sInfo("$request - $status")
+                    }
                 }
-
-                val status = call.response.status()?.value?.toString()
-
-                logContext["durationToHandle"] = "${System.currentTimeMillis() - preHandleTime}"
-                logContext["request"] = context.request.path()
-                logContext["status"] = status
-
-                val request = call.attributes.getOrNull(PATH)
-                    ?: "${context.request.path()}/(method:${method.value})"
-
-                logger.sInfo("$request - $status")
             }
 
             return feature
         }
     }
 }
+
+private fun Parameters.toLogString() = flattenEntries().joinToString { "${it.first} = ${it.second}" }

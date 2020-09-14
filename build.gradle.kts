@@ -2,14 +2,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Date
 
 plugins {
-    kotlin("jvm") version "1.3.70"
+    kotlin("jvm") version "1.4.10"
     `maven-publish`
     id("com.jfrog.bintray") version "1.8.4"
 }
 
 val artifactName = "ktor-extension"
 val artifactGroup = "kr.jadekim"
-val artifactVersion = "1.0.1"
+val artifactVersion = "1.1.0"
 group = artifactGroup
 version = artifactVersion
 
@@ -23,16 +23,11 @@ dependencies {
     val commonApiServerVersion: String by project
     val jLoggerVersion: String by project
     val ktorVersion: String by project
-    val jacksonVersion: String by project
-
-    implementation(kotlin("stdlib-jdk8"))
 
     implementation("kr.jadekim:j-logger:$jLoggerVersion")
     api("kr.jadekim:common-api-server:$commonApiServerVersion")
-
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-
     api("io.ktor:ktor-server-core:$ktorVersion")
+
     compileOnly("io.ktor:ktor-auth:$ktorVersion")
 }
 
