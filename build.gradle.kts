@@ -9,7 +9,7 @@ plugins {
 
 val artifactName = "ktor-extension"
 val artifactGroup = "kr.jadekim"
-val artifactVersion = "1.1.1"
+val artifactVersion = "1.1.2"
 group = artifactGroup
 version = artifactVersion
 
